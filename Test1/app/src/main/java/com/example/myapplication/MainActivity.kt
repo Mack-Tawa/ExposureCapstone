@@ -18,30 +18,44 @@ import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.google.android.gms.tasks.CancellationTokenSource
 import android.os.Build
+import android.os.Looper
 import android.view.View
 import android.widget.Button
 import android.widget.TextView
 import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
+import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationSettingsRequest
 import com.google.android.gms.location.Priority.PRIORITY_HIGH_ACCURACY
+import java.util.concurrent.TimeUnit
 
 
 class MainActivity : AppCompatActivity() {
 
-    private lateinit var textView : TextView
+    private lateinit var textView: TextView
     private lateinit var latTextView: TextView
     private lateinit var lonTextView: TextView
-    private lateinit var fusedLocationProviderClient: FusedLocationProviderClient
     private lateinit var button: Button
-    private var currentLocation: Location? = null
-    lateinit var locationManager: LocationManager
+
     lateinit var locationByGps: Location
     lateinit var locationByNetwork: Location
 
+    lateinit var locationManager: LocationManager
 
+    // FusedLocationProviderClient - Main class for receiving location updates.
+    private lateinit var fusedLocationProviderClient: FusedLocationProviderClient
 
+    // LocationRequest - Requirements for the location updates, i.e.,
+// how often you should receive updates, the priority, etc.
+    private lateinit var locationRequest: LocationRequest
 
+    // LocationCallback - Called when FusedLocationProviderClient
+// has a new Location
+    private lateinit var locationCallback: LocationCallback
+
+    // This will store current location info
+    private var currentLocation: Location? = null
 
 
     @SuppressLint("MissingPermission")
@@ -74,19 +88,50 @@ class MainActivity : AppCompatActivity() {
     }
 
 
-
     @SuppressLint("MissingPermission")
-    fun getNewLocation() {
+    fun getNewLocation(fusedLocationProviderClient: FusedLocationProviderClient) {
 
-        fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this)
+        locationRequest = LocationRequest().apply {
+            // Sets the desired interval for
+            // active location updates.
+            // This interval is inexact.
+            interval = TimeUnit.SECONDS.toMillis(60)
 
-//        fusedLocationProviderClient.lastLocation
-        fusedLocationProviderClient.lastLocation.addOnSuccessListener {location : Location? ->
-            latTextView = findViewById(R.id.latTextView)
-            lonTextView = findViewById(R.id.lonValueTextView)
-            latTextView.text = location!!.latitude.toString()
-            lonTextView.text = location!!.longitude.toString()
+            // Sets the fastest rate for active location updates.
+            // This interval is exact, and your application will never
+            // receive updates more frequently than this value
+            fastestInterval = TimeUnit.SECONDS.toMillis(30)
+
+            // Sets the maximum time when batched location
+            // updates are delivered. Updates may be
+            // delivered sooner than this interval
+            maxWaitTime = TimeUnit.MINUTES.toMillis(2)
+
+            priority = LocationRequest.PRIORITY_HIGH_ACCURACY
+
+            locationCallback = object : LocationCallback() {
+                override fun onLocationResult(p0: LocationResult) {
+                    if (p0 != null) {
+                        super.onLocationResult(p0)
+                    }
+                    p0?.lastLocation?.let {
+                        currentLocation = locationByGps
+                        var latitude = currentLocation!!.latitude
+                        var longitude = currentLocation!!.longitude
+                        // use latitude and longitude as per your need
+                    } ?: {
+                        Log.d("gpsError", "Location information isn't available.")
+                    }
+                }
+            }
+
+            fusedLocationProviderClient.requestLocationUpdates(locationRequest, locationCallback, Looper.myLooper())
         }
+
+
+
+
+
     }
 
     @SuppressLint("MissingPermission")
@@ -95,8 +140,6 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
 
-
-        locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
 
         val requestPermissionLauncher =
             registerForActivityResult(
@@ -118,66 +161,23 @@ class MainActivity : AppCompatActivity() {
             }
         requestPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
 
-
-//        val hasGps = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
-//        val hasNetwork = locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
-//        val gpsLocationListener: LocationListener = object : LocationListener {
-//            override fun onLocationChanged(location: Location) {
-//                var locationByGps = location
-//            }
+        // ***************************This works***************************
+//        fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this)
 //
-//            override fun onStatusChanged(provider: String, status: Int, extras: Bundle) {}
-//            override fun onProviderEnabled(provider: String) {}
-//            override fun onProviderDisabled(provider: String) {}
-//        }
-////------------------------------------------------------//
-//        val networkLocationListener: LocationListener = object : LocationListener {
-//            override fun onLocationChanged(location: Location) {
-//                locationByNetwork= location
-//            }
-//
-//            override fun onStatusChanged(provider: String, status: Int, extras: Bundle) {}
-//            override fun onProviderEnabled(provider: String) {}
-//            override fun onProviderDisabled(provider: String) {}
-//        }
-//
-//        val lastKnownLocationByGps =
-//            locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
-//        lastKnownLocationByGps?.let {
-//            var locationByGps = lastKnownLocationByGps
-//        }
-////------------------------------------------------------//
-//        val lastKnownLocationByNetwork =
-//            locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
-//        lastKnownLocationByNetwork?.let {
-//            var locationByNetwork = lastKnownLocationByNetwork
-//        }
-////------------------------------------------------------//
-//        if (locationByGps != null && locationByNetwork != null) {
-//            if (locationByGps.accuracy > locationByNetwork!!.accuracy) {
-//                currentLocation = locationByGps
-//                var latitude = currentLocation!!.latitude
-//                var longitude = currentLocation!!.longitude
-//                // use latitude and longitude as per your need
-//            } else {
-//                currentLocation = locationByNetwork
-//               var latitude = currentLocation!!.latitude
-//               var longitude = currentLocation!!.longitude
-//                // use latitude and longitude as per your need
-//            }
-//        }
+////        fusedLocationProviderClient.lastLocation
+//        fusedLocationProviderClient.lastLocation.addOnSuccessListener { location: Location? ->
+//            latTextView = findViewById(R.id.latTextView)
+//            lonTextView = findViewById(R.id.lonValueTextView)
+//            latTextView.text = location!!.latitude.toString()
+//            lonTextView.text = location!!.longitude.toString()
+        // ************************************************************************
 
         fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this)
+        getNewLocation(fusedLocationProviderClient)
 
-//        fusedLocationProviderClient.lastLocation
-        fusedLocationProviderClient.lastLocation.addOnSuccessListener {location : Location? ->
-            latTextView = findViewById(R.id.latTextView)
-            lonTextView = findViewById(R.id.lonValueTextView)
-            latTextView.text = location!!.latitude.toString()
-            lonTextView.text = location!!.longitude.toString()
         }
     }
+
     fun onClick(view: View) {
         Log.d("test", "idk")
     }
-}
