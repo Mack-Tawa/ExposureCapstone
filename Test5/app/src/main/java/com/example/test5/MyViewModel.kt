@@ -47,13 +47,9 @@ class MyViewModel(application:Application): ViewModel() {
     fun showLastGPS() {
 
         Log.i("showLastGPS", "we in here")
-    }
-
-    fun loadDataFromWorker(applicationContext: Context?) {
 
 
     }
-
 
 }
 

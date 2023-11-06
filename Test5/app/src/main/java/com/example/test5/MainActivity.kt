@@ -15,8 +15,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.app.ActivityCompat
+import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.test5.ui.theme.Test5Theme
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.last
+import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -31,8 +40,10 @@ class MainActivity : ComponentActivity() {
             0
         )
 
-        ActivityCompat.requestPermissions(this,
-            arrayOf(Manifest.permission.ACCESS_BACKGROUND_LOCATION), 0)
+        ActivityCompat.requestPermissions(
+            this,
+            arrayOf(Manifest.permission.ACCESS_BACKGROUND_LOCATION), 0
+        )
 
 
 
@@ -45,7 +56,9 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    val vm = viewModel { MyViewModelFactory(this@MainActivity.application).create(MyViewModel::class.java) }
+                    val vm = viewModel {
+                        MyViewModelFactory(this@MainActivity.application).create(MyViewModel::class.java)
+                    }
 
                     Column(
 
@@ -60,10 +73,16 @@ class MainActivity : ComponentActivity() {
                             val testLat: Double = 44.0
                             val testLon: Double = 44.0
 
+                            var testData = GPSData(System.currentTimeMillis(), testLat, testLon)
 
-//                            runBlocking {
-//                                GPSDatabase.getDatabase(applicationContext).GPSDao().addGPSData(testData)
-//                            }
+                            lifecycleScope.launch {
+                                withContext(Dispatchers.IO) {
+                                    GPSDatabase.getDatabase(applicationContext).GPSDao()
+                                        .addGPSData(testData)
+                                }
+                            }
+
+
 
                             Log.i("myTests", "it worked")
 
@@ -104,23 +123,53 @@ class MainActivity : ComponentActivity() {
 
                         }
 
-                        Button(onClick = { vm.showLastGPS() }) {
+                        Button(onClick = {
+
+                            runBlocking {
+                                var coords = getLastGPS()
+                            }
+                            Log.i("ShowLastGPS", "done")
+
+
+                        }) {
                             Text("ShowLastGPS")
                         }
-//                    val workInfo = WorkManager.getInstance().getWorkInfosForUniqueWork("getBackgroundLocation").get()
-////                    for (work in workInfo) {
-//////                        Text(text = work.)
-////                    }
-//                    Log.d("workInfo", "work is...${workInfo.get(0)}")
+
                     }
-
-
-
-
-
                 }
             }
         }
     }
+
+    suspend fun getLastGPS() = coroutineScope {
+
+        var tempLat: Double = -999.0
+        var tempLong: Double = -999.0
+
+//        launch {
+
+
+        val coords =
+            GPSDatabase.getDatabase(applicationContext).GPSDao().latestGPS()
+//
+//        Log.i("getLastGPS", "latitude is..." + coords.last().latitude.toString())
+//        Log.i("getLastGPS", "longitude is..." + coords.last().longitude.toString())
+
+            runBlocking {
+                coords.collect {
+
+                    tempLat = it.latitude
+                    tempLong = it.longitude
+                    Log.i("ShowLastGPS", "latitude is...." + it.latitude.toString())
+                    Log.i(
+                        "ShowLastGPS",
+                        "longitdue is...." + it.longitude.toString()
+                    )
+                }
+            }
+        val result: GPSData = GPSData(System.currentTimeMillis(), tempLat, tempLong)
+        return@coroutineScope result
+    }
 }
+
 
