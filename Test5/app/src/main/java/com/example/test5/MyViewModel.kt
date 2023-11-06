@@ -3,6 +3,7 @@ package com.example.test5
 import android.app.Application
 import android.content.Context
 import android.util.Log
+import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -21,6 +22,7 @@ class MyViewModel(application:Application): ViewModel() {
 //    val allWeather: LiveData<List<GPSData>> = repository.allLocations
 
     private val workManager = WorkManager.getInstance(application)
+
 
 
 //    internal val outputWorkInfos: LiveData<List<WorkInfo>> = workManager.getWorkInfosByTagLiveData("OUTPUT")
@@ -42,13 +44,6 @@ class MyViewModel(application:Application): ViewModel() {
 
         workManager.getWorkInfoById(continuation.id)
 //        repository.checkWeather(city)
-    }
-
-    fun showLastGPS() {
-
-        Log.i("showLastGPS", "we in here")
-
-
     }
 
 }

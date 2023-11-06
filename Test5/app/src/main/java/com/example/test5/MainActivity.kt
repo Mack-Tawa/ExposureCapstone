@@ -1,6 +1,7 @@
 package com.example.test5
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -21,11 +22,14 @@ import com.example.test5.ui.theme.Test5Theme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectIndexed
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.last
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
+import java.lang.Exception
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -69,18 +73,18 @@ class MainActivity : ComponentActivity() {
 
 
 //                            vm.loadDataFromWorker(applicationContext)
+//
+//                            val testLat: Double = 44.0
+//                            val testLon: Double = 44.0
 
-                            val testLat: Double = 44.0
-                            val testLon: Double = 44.0
+//                            var testData = GPSData(System.currentTimeMillis(), testLat, testLon)
 
-                            var testData = GPSData(System.currentTimeMillis(), testLat, testLon)
-
-                            lifecycleScope.launch {
-                                withContext(Dispatchers.IO) {
-                                    GPSDatabase.getDatabase(applicationContext).GPSDao()
-                                        .addGPSData(testData)
-                                }
-                            }
+//                            lifecycleScope.launch {
+//                                withContext(Dispatchers.IO) {
+//                                    GPSDatabase.getDatabase(applicationContext).GPSDao()
+//                                        .addGPSData(testData)
+//                                }
+//                            }
 
 
 
@@ -125,9 +129,27 @@ class MainActivity : ComponentActivity() {
 
                         Button(onClick = {
 
-                            runBlocking {
-                                var coords = getLastGPS()
+                            lifecycleScope.launch {
+
+                                val coords =
+                                    GPSDatabase.getDatabase(applicationContext).GPSDao().latestGPS()
+
+                                Log.i("getLatestGPS", coords.toString())
+                                coords.collect{data: GPSData ->
+                                    run {
+                                        Log.i("getLatestGPS", "latitude..."+data.latitude.toString())
+                                        Log.i("getLatestGPS", "longitude..." + data.longitude.toString())
+                                    }
+                                }
+
+//                                var coords = getLastGPS()
+//
+//                                coords.collectLatest { result: GPSData -> {
+//                                    GPSDatabase.getDatabase(applicationContext).GPSDao().latestGPS()
+//                                } }
+
                             }
+
                             Log.i("ShowLastGPS", "done")
 
 
@@ -155,20 +177,33 @@ class MainActivity : ComponentActivity() {
 //        Log.i("getLastGPS", "latitude is..." + coords.last().latitude.toString())
 //        Log.i("getLastGPS", "longitude is..." + coords.last().longitude.toString())
 
-            runBlocking {
-                coords.collect {
+//        coords.toList()
+        coords.collectLatest { data: GPSData ->
+            tempLat = data.latitude
+            tempLong = data.longitude
+        }
 
-                    tempLat = it.latitude
-                    tempLong = it.longitude
-                    Log.i("ShowLastGPS", "latitude is...." + it.latitude.toString())
-                    Log.i(
-                        "ShowLastGPS",
-                        "longitdue is...." + it.longitude.toString()
-                    )
-                }
-            }
-        val result: GPSData = GPSData(System.currentTimeMillis(), tempLat, tempLong)
-        return@coroutineScope result
+        Log.i("getLastGPS", "made it after the collectLatest")
+
+
+
+
+        Log.i("getLastGPS", "after last converesion")
+
+
+//        runBlocking {
+//            coords.collect {
+//
+//                tempLat = it.latitude
+//                tempLong = it.longitude
+//                Log.i("ShowLastGPS", "latitude is...." + it.latitude.toString())
+//                Log.i(
+//                    "ShowLastGPS",
+//                    "longitdue is...." + it.longitude.toString()
+//                )
+//            }
+//        }
+        return@coroutineScope coords
     }
 }
 

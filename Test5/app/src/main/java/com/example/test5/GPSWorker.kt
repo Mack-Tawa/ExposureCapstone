@@ -42,7 +42,17 @@ class GPSWorker(appContext: Context, workerParams: WorkerParameters):
                     var lat = location.latitude
                     var lon = location.longitude
                     Log.d("GPSWorker", "lat is...$lat\n lon is...$lon")
-                    val outputLocationData = workDataOf("lat" to lat, "lon" to lon)
+                    val inputData = GPSData(System.currentTimeMillis(), lat, lon)
+
+                    runBlocking {
+                        GPSDatabase.getDatabase(context).GPSDao().addGPSData(inputData)
+                        Log.i("GPSWorker", "inside runblocking for worker and data was input probably")
+                    }
+
+                    Log.i("GPSWorker", "after GPSWorker and I think everything worked??")
+
+
+
 //                    val tempData = GPSData(System.currentTimeMillis(), lat, lon)
 //                    runBlocking {
 //                        GPSDatabase.getDatabase(context).GPSDao().addGPSData(tempData)
