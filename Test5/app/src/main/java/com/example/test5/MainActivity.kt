@@ -4,6 +4,7 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.os.Bundle
 import android.util.Log
+import android.widget.TextView
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Column
@@ -12,7 +13,12 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.app.ActivityCompat
@@ -32,8 +38,12 @@ import kotlinx.coroutines.withContext
 import java.lang.Exception
 
 class MainActivity : ComponentActivity() {
+
+
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
 
         ActivityCompat.requestPermissions(
             this,
@@ -66,69 +76,35 @@ class MainActivity : ComponentActivity() {
 
                     Column(
 
+
                     ) {
+
+                        var latText by remember { mutableStateOf("No Latitude Data") }
+                        var longText by remember { mutableStateOf("No Longitude Data") }
+
+                        Text(text = latText)
+                        Text(text = longText)
+
+
+
 
 
                         Button(onClick = {
-
-
-//                            vm.loadDataFromWorker(applicationContext)
-//
-//                            val testLat: Double = 44.0
-//                            val testLon: Double = 44.0
-
-//                            var testData = GPSData(System.currentTimeMillis(), testLat, testLon)
-
-//                            lifecycleScope.launch {
-//                                withContext(Dispatchers.IO) {
-//                                    GPSDatabase.getDatabase(applicationContext).GPSDao()
-//                                        .addGPSData(testData)
-//                                }
-//                            }
 
 
 
                             Log.i("myTests", "it worked")
 
 
+
                             vm.startGPSWork()
 
-//                            WorkManager.
-
-//                        vm.startGPSWork()
-//                            Log.i("after startGPSWork", "after startGPSWork")
-//
-//                            val constraints: Constraints = Constraints.Builder()
-//                                .setRequiresCharging(false)
-//                                .build()
-//                            val periodicWorkRequest: PeriodicWorkRequest = PeriodicWorkRequest.Builder(
-//                                GPSWorker::class.java, 3, TimeUnit.SECONDS
-//                            )
-//                                .setConstraints(constraints)
-//                                .build()
-//
-//
-//                            val sendLogsWorkRequest =
-//                                PeriodicWorkRequestBuilder<GPSWorker>(3, TimeUnit.SECONDS)
-//                                    .setConstraints(Constraints.Builder()
-//                                        .setRequiresBatteryNotLow(true)
-//                                        .build()
-//                                    )
-//                                    .build()
-//                            Log.d("macktivity", "after request build")
-//                            WorkManager.getInstance().enqueueUniquePeriodicWork(
-//                                "getBackgroundLocation",
-//                                ExistingPeriodicWorkPolicy.KEEP,
-//                                sendLogsWorkRequest
-//                            )
-//                            Log.d("macktivity", "after Workmanager")
                         }) {
                             Text(text = "Click to Start GPS Tracking")
 
                         }
 
                         Button(onClick = {
-
                             lifecycleScope.launch {
 
                                 val coords =
@@ -137,17 +113,12 @@ class MainActivity : ComponentActivity() {
                                 Log.i("getLatestGPS", coords.toString())
                                 coords.collect{data: GPSData ->
                                     run {
+                                        latText = data.latitude.toString()
+                                        longText = data.longitude.toString()
                                         Log.i("getLatestGPS", "latitude..."+data.latitude.toString())
                                         Log.i("getLatestGPS", "longitude..." + data.longitude.toString())
                                     }
                                 }
-
-//                                var coords = getLastGPS()
-//
-//                                coords.collectLatest { result: GPSData -> {
-//                                    GPSDatabase.getDatabase(applicationContext).GPSDao().latestGPS()
-//                                } }
-
                             }
 
                             Log.i("ShowLastGPS", "done")
@@ -156,7 +127,6 @@ class MainActivity : ComponentActivity() {
                         }) {
                             Text("ShowLastGPS")
                         }
-
                     }
                 }
             }
@@ -205,6 +175,7 @@ class MainActivity : ComponentActivity() {
 //        }
         return@coroutineScope coords
     }
+
 }
 
 

@@ -11,7 +11,7 @@ import java.util.Date
 class GPSRepository(val scope: CoroutineScope, val dao: GPSDAO) {
 
     //    val currentPainting = dao.latestPainting().asLiveData()
-    val allPics = dao.allLocations().asLiveData()
+    val allCoords = dao.allRecentLocations().asLiveData()
     suspend fun addPainting(latitude: Double, longitude: Double) {
         scope.launch{
             dao.addGPSData(GPSData(System.currentTimeMillis(), latitude, longitude))

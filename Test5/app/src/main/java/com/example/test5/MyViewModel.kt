@@ -9,6 +9,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.PeriodicWorkRequest
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 
@@ -29,10 +30,9 @@ class MyViewModel(application:Application): ViewModel() {
 
 
     fun startGPSWork() {
-        var continuation = PeriodicWorkRequestBuilder<GPSWorker>(3, TimeUnit.SECONDS)
+        var continuation = PeriodicWorkRequestBuilder<GPSWorker>(PeriodicWorkRequest.MIN_PERIODIC_INTERVAL_MILLIS, TimeUnit.MICROSECONDS)
             .setConstraints(
                 Constraints.Builder()
-                    .setRequiresBatteryNotLow(true)
                     .build()
             )
             .build()
@@ -42,7 +42,6 @@ class MyViewModel(application:Application): ViewModel() {
             continuation
         )
 
-        workManager.getWorkInfoById(continuation.id)
 //        repository.checkWeather(city)
     }
 

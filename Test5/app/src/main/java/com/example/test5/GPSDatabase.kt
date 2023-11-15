@@ -50,8 +50,9 @@ interface GPSDAO {
     fun latestGPS(): Flow<GPSData>
 
 
-    @Query("SELECT * from Locations ORDER BY timestamp DESC")
-    fun allLocations(): Flow<List<GPSData>>
+    @Query("SELECT * from Locations ORDER BY timestamp DESC LIMIT 24")
+    fun allRecentLocations(): Flow<List<GPSData>>
+
 }
 
 
