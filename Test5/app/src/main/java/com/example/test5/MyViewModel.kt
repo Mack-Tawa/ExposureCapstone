@@ -30,6 +30,7 @@ class MyViewModel(application:Application): ViewModel() {
 
 
     fun startGPSWork() {
+        Log.i("startGPSWork", "inside start gps work")
         var continuation = PeriodicWorkRequestBuilder<GPSWorker>(PeriodicWorkRequest.MIN_PERIODIC_INTERVAL_MILLIS, TimeUnit.MICROSECONDS)
             .setConstraints(
                 Constraints.Builder()
