@@ -2,45 +2,37 @@ package com.example.test5
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.icu.text.DateFormat
+import android.icu.text.SimpleDateFormat
 import android.os.Bundle
 import android.util.Log
-import android.widget.TextView
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.app.ActivityCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.test5.ui.theme.Test5Theme
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.collectIndexed
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.last
-import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withContext
-import java.lang.Exception
 
 class MainActivity : ComponentActivity() {
 
 
 
+
+    @SuppressLint("CoroutineCreationDuringComposition")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -79,8 +71,9 @@ class MainActivity : ComponentActivity() {
 
                     ) {
 
-                        var latText by remember { mutableStateOf("No Latitude Data") }
-                        var longText by remember { mutableStateOf("No Longitude Data") }
+                        var listText by remember { mutableStateOf(("")) }
+                        var latText by remember { mutableStateOf("") }
+                        var longText by remember { mutableStateOf("") }
 
                         Text(text = latText)
                         Text(text = longText)
@@ -89,8 +82,10 @@ class MainActivity : ComponentActivity() {
 
 
 
-                        Button(onClick = {
 
+
+
+                        Button(onClick = {
 
 
                             Log.i("myTests", "it worked")
@@ -105,18 +100,32 @@ class MainActivity : ComponentActivity() {
                         }
 
                         Button(onClick = {
+
+//                            try {
+//                                lifecycleScope.launch {
+//                                    GPSDatabase.getDatabase(applicationContext).GPSDao().latestGPS()
+//                                }
+//                            }catch(e : Exception) {
+//                                e.printStackTrace()
+//                            }
+
                             lifecycleScope.launch {
 
-                                val coords =
-                                    GPSDatabase.getDatabase(applicationContext).GPSDao().latestGPS()
+                                val coords = GPSDatabase.getDatabase(applicationContext).GPSDao().latestGPS()
 
                                 Log.i("getLatestGPS", coords.toString())
-                                coords.collect{data: GPSData ->
+                                coords.collect { data: GPSData ->
                                     run {
                                         latText = data.latitude.toString()
                                         longText = data.longitude.toString()
-                                        Log.i("getLatestGPS", "latitude..."+data.latitude.toString())
-                                        Log.i("getLatestGPS", "longitude..." + data.longitude.toString())
+                                        Log.i(
+                                            "getLatestGPS",
+                                            "latitude..." + data.latitude.toString()
+                                        )
+                                        Log.i(
+                                            "getLatestGPS",
+                                            "longitude..." + data.longitude.toString()
+                                        )
                                     }
                                 }
                             }
@@ -127,54 +136,92 @@ class MainActivity : ComponentActivity() {
                         }) {
                             Text("ShowLastGPS")
                         }
+                        Button(onClick = {
+                            Log.i(
+                                "showAll",
+                                "**********************inside showAll**********************\nshow all has been clicked"
+                            )
+
+                            val coordsList = GPSDatabase.getDatabase(applicationContext).GPSDao()
+                                .allRecentLocations()
+                            val simpleDateFormat = SimpleDateFormat("MM/dd/yyyy/H:m::s")
+
+                            lifecycleScope.launch {
+                                coordsList.collect { data: List<GPSData> ->
+                                    Log.i("showAll", "size of retrieved list is...${data.size}")
+                                    for (datum in data) {
+                                        val dateString = simpleDateFormat.format(datum.timestamp)
+
+                                        Log.i(
+                                            "showAll",
+                                            "data is...${datum.latitude}\n${datum.longitude}\n$dateString"
+                                        )
+                                        listText += "\nLatitude...${datum.latitude}\nLongitude...${datum.longitude}\nTime...${dateString}"
+                                        listText += "\n--------------------------"
+                                    }
+                                }
+
+
+                            }
+                            Log.i("showAll", "list contains...\n${coordsList.toString()}")
+
+                        }) {
+                            Text(text = "Show All Previous Locations")
+
+                        }
+                        Text(text = listText,
+                            modifier = Modifier
+                            .verticalScroll(rememberScrollState()))
+
                     }
                 }
             }
         }
     }
 
-    suspend fun getLastGPS() = coroutineScope {
 
-        var tempLat: Double = -999.0
-        var tempLong: Double = -999.0
-
-//        launch {
-
-
-        val coords =
-            GPSDatabase.getDatabase(applicationContext).GPSDao().latestGPS()
+//    suspend fun getLastGPS() = coroutineScope {
 //
-//        Log.i("getLastGPS", "latitude is..." + coords.last().latitude.toString())
-//        Log.i("getLastGPS", "longitude is..." + coords.last().longitude.toString())
-
-//        coords.toList()
-        coords.collectLatest { data: GPSData ->
-            tempLat = data.latitude
-            tempLong = data.longitude
-        }
-
-        Log.i("getLastGPS", "made it after the collectLatest")
-
-
-
-
-        Log.i("getLastGPS", "after last converesion")
-
-
-//        runBlocking {
-//            coords.collect {
+//        var tempLat: Double = -999.0
+//        var tempLong: Double = -999.0
 //
-//                tempLat = it.latitude
-//                tempLong = it.longitude
-//                Log.i("ShowLastGPS", "latitude is...." + it.latitude.toString())
-//                Log.i(
-//                    "ShowLastGPS",
-//                    "longitdue is...." + it.longitude.toString()
-//                )
-//            }
+////        launch {
+//
+//
+//        val coords =
+//            GPSDatabase.getDatabase(applicationContext).GPSDao().latestGPS()
+////
+////        Log.i("getLastGPS", "latitude is..." + coords.last().latitude.toString())
+////        Log.i("getLastGPS", "longitude is..." + coords.last().longitude.toString())
+//
+////        coords.toList()
+//        coords.collectLatest { data: GPSData ->
+//            tempLat = data.latitude
+//            tempLong = data.longitude
 //        }
-        return@coroutineScope coords
-    }
+//
+//        Log.i("getLastGPS", "made it after the collectLatest")
+//
+//
+//
+//
+//        Log.i("getLastGPS", "after last converesion")
+//
+//
+////        runBlocking {
+////            coords.collect {
+////
+////                tempLat = it.latitude
+////                tempLong = it.longitude
+////                Log.i("ShowLastGPS", "latitude is...." + it.latitude.toString())
+////                Log.i(
+////                    "ShowLastGPS",
+////                    "longitdue is...." + it.longitude.toString()
+////                )
+////            }
+////        }
+//        return@coroutineScope coords
+//    }
 
 }
 
