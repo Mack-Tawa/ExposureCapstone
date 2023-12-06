@@ -2,10 +2,12 @@ package com.example.test5
 
 import android.Manifest
 import android.annotation.SuppressLint
-import android.icu.text.DateFormat
 import android.icu.text.SimpleDateFormat
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Column
@@ -25,9 +27,21 @@ import androidx.core.app.ActivityCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.test5.ui.theme.Test5Theme
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import okhttp3.Call
+import okhttp3.Callback
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.Response
+import okhttp3.ResponseBody
+import java.io.IOException
+import java.util.concurrent.TimeUnit
+
 
 class MainActivity : ComponentActivity() {
+
+    val url = "http://10.0.2.2:8080/getAQI"
 
 
 
@@ -118,14 +132,14 @@ class MainActivity : ComponentActivity() {
                                     run {
                                         latText = data.latitude.toString()
                                         longText = data.longitude.toString()
-                                        Log.i(
-                                            "getLatestGPS",
-                                            "latitude..." + data.latitude.toString()
-                                        )
-                                        Log.i(
-                                            "getLatestGPS",
-                                            "longitude..." + data.longitude.toString()
-                                        )
+//                                        Log.i(
+//                                            "getLatestGPS",
+//                                            "latitude..." + data.latitude.toString()
+//                                        )
+//                                        Log.i(
+//                                            "getLatestGPS",
+//                                            "longitude..." + data.longitude.toString()
+//                                        )
                                     }
                                 }
                             }
@@ -135,6 +149,25 @@ class MainActivity : ComponentActivity() {
 
                         }) {
                             Text("ShowLastGPS")
+                        }
+                        Button(onClick = {
+                            var tempLat = ""
+                            var tempLon = ""
+                            lifecycleScope.launch {
+                                var userCoordinates = getLatestGPS()
+                                tempLat = userCoordinates[0]
+                                tempLon = userCoordinates[1]
+                                Log.i("getAQI", "giving latitude...${tempLat}")
+                                Log.i("getAQI", "giving longitude...${tempLon}")
+                                //sendRequest("40.7139467", "-111.9719233")
+                                getAQI(tempLat, tempLon)
+
+
+                            }
+
+                        }) {
+                            Text(text = "Get AQI From Last Position")
+
                         }
                         Button(onClick = {
                             Log.i(
@@ -179,49 +212,89 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun getAQI(latitude: String, longitude: String) {
 
-//    suspend fun getLastGPS() = coroutineScope {
-//
-//        var tempLat: Double = -999.0
-//        var tempLong: Double = -999.0
-//
-////        launch {
-//
-//
-//        val coords =
-//            GPSDatabase.getDatabase(applicationContext).GPSDao().latestGPS()
-////
-////        Log.i("getLastGPS", "latitude is..." + coords.last().latitude.toString())
-////        Log.i("getLastGPS", "longitude is..." + coords.last().longitude.toString())
-//
-////        coords.toList()
-//        coords.collectLatest { data: GPSData ->
-//            tempLat = data.latitude
-//            tempLong = data.longitude
-//        }
-//
-//        Log.i("getLastGPS", "made it after the collectLatest")
-//
-//
-//
-//
-//        Log.i("getLastGPS", "after last converesion")
-//
-//
-////        runBlocking {
-////            coords.collect {
-////
-////                tempLat = it.latitude
-////                tempLong = it.longitude
-////                Log.i("ShowLastGPS", "latitude is...." + it.latitude.toString())
-////                Log.i(
-////                    "ShowLastGPS",
-////                    "longitdue is...." + it.longitude.toString()
-////                )
-////            }
-////        }
-//        return@coroutineScope coords
-//    }
+        // setup client
+        val client = OkHttpClient().newBuilder()
+            .connectTimeout(10, TimeUnit.SECONDS)
+            .readTimeout(10, TimeUnit.SECONDS)
+            .writeTimeout(10, TimeUnit.SECONDS).build()
+
+        //setup request
+        val request = Request.Builder()
+            .url("$url?latitude=$latitude&longitude=$longitude")
+            .build()
+
+        //call the request
+        client.newCall(request).enqueue(object : Callback {
+            //throw if fail
+            override fun onFailure(call: Call, e: IOException) {
+                e.printStackTrace()
+            }
+
+            //work if response is received
+            override fun onResponse(call: Call, response: Response) {
+                response.use {
+                    if (!response.isSuccessful)
+                        throw IOException("Unexpected code $response")
+
+                    for ((name, value) in response.headers) {
+                        Log.i("flask stuff", ("name is...$name: value is...$value"))
+                    }
+                    val result = response.body!!.string()
+                    Log.i("flask stuff", "result is...$result")
+                    // looper needed to access ui thread to Toast
+                    Handler(Looper.getMainLooper()).post {
+                        Toast.makeText(applicationContext, result, Toast.LENGTH_SHORT).show()
+                    }
+                    // if I uncomment the line below it breaks. I don't know why.
+                    //Log.i("flask stuff", "THIS body is..." + (response.body!!.string()))
+
+                }
+            }
+        })
+    }
+    suspend fun getLatestGPS(): ArrayList<String> {
+
+    var coordinates = ArrayList<String>()
+    var test: Boolean = lifecycleScope.launch {
+
+        val coords = GPSDatabase.getDatabase(applicationContext).GPSDao().latestGPS()
+
+
+        Log.i("getLatestGPSFun", coords.toString())
+        coords.collect { data: GPSData ->
+            run {
+                //add to arrayList
+                coordinates.add(data.latitude.toString())
+                coordinates.add(data.longitude.toString())
+                Log.i("getLatestGPSFun", "coordinates array size should be 2??? and it's...${coordinates.size}")
+                Log.i("getLatestGPSFun", "coord[0]is...${coordinates[0]}")
+                Log.i("getLatestGPSFun", "coord[1]is...${coordinates[1]}")
+
+
+                Log.i(
+                    "getLatestGPSFun",
+                    "latitude..." + data.latitude.toString()
+                )
+                Log.i(
+                    "getLatestGPSFun",
+                    "longitude..." + data.longitude.toString()
+                )
+            }
+        }
+    }.isCompleted
+    Log.i("getLatestGPSFun", "before delay isCompleted is...${test}")
+    // needed this to wait for the last coroutine to finish
+    delay(1000)
+    Log.i("getLatestGPSFun", "after delay isCompleted is...${test}")
+
+    Log.i("getLatestGPSFun", "done")
+    Log.i("getLatestGPSFun", "size of result array is...${coordinates.size}")
+
+    return coordinates
+
+    }
 
 }
 
